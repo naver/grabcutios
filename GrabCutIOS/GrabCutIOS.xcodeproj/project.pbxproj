@@ -452,6 +452,7 @@
 				905F61091B919E8C00094E52 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		905F610A1B919E8C00094E52 /* Build configuration list for PBXNativeTarget "GrabCutIOSTests" */ = {
 			isa = XCConfigurationList;
@@ -460,6 +461,7 @@
 				905F610C1B919E8C00094E52 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
