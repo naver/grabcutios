@@ -1,0 +1,19 @@
+//
+//  OpenCVTestPreifx.pch
+//  OpenCVTest
+//
+//  Created by EunchulJeon on 2015. 8. 16..
+//  Copyright (c) 2015년 EunchulJeon. All rights reserved.
+//
+
+#ifndef OpenCVTest_OpenCVTestPreifx_pch
+#define OpenCVTest_OpenCVTestPreifx_pch
+
+// Include any system framework and library headers here that should be included in all compilation units.
+// You will also need to set the Prefix Header build setting of one or more of your targets to reference this file.
+
+#ifdef __cplusplus
+#import <opencv2/opencv.hpp>
+#endif
+
+#endif
