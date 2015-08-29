@@ -76,6 +76,26 @@
                                     <action selector="tapOnDoGrabcut:" destination="BYZ-38-t0r" eventType="touchUpInside" id="Rfp-UH-0UU"/>
                                 </connections>
                             </button>
+                            <button opaque="NO" alpha="0.69999999999999996" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="bXc-RS-hso" userLabel="Camera Button">
+                                <rect key="frame" x="36" y="530" width="54" height="30"/>
+                                <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                <state key="normal" title="Camera">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                                <connections>
+                                    <action selector="tapOnCamera:" destination="BYZ-38-t0r" eventType="touchUpInside" id="Eak-ZF-evO"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" alpha="0.69999999999999996" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="z4K-wz-D9i" userLabel="Photo Button">
+                                <rect key="frame" x="36" y="490" width="41" height="30"/>
+                                <color key="backgroundColor" red="0.97647058819999999" green="0.97647058819999999" blue="0.97647058819999999" alpha="1" colorSpace="calibratedRGB"/>
+                                <state key="normal" title="Photo">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                                <connections>
+                                    <action selector="tapOnPhoto:" destination="BYZ-38-t0r" eventType="touchUpInside" id="ngc-mY-7wZ"/>
+                                </connections>
+                            </button>
                             <label opaque="NO" userInteractionEnabled="NO" alpha="0.5" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Touch State" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="aNB-Jt-D3w">
                                 <rect key="frame" x="36" y="50" width="77" height="17"/>
                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
@@ -92,6 +112,7 @@
                             <constraint firstItem="oom-es-Zq4" firstAttribute="width" secondItem="W1c-d8-yTN" secondAttribute="width" id="4Y3-42-MLJ"/>
                             <constraint firstItem="oom-es-Zq4" firstAttribute="top" secondItem="0Xn-58-DEw" secondAttribute="top" id="8jM-t9-QaY"/>
                             <constraint firstItem="oom-es-Zq4" firstAttribute="width" secondItem="0Xn-58-DEw" secondAttribute="width" id="9kl-Ie-R2K"/>
+                            <constraint firstItem="bXc-RS-hso" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leadingMargin" constant="20" id="CMN-vK-pOo"/>
                             <constraint firstItem="rCx-Uq-N2K" firstAttribute="top" secondItem="moL-qf-KEe" secondAttribute="bottom" constant="20" id="F45-hx-81A"/>
                             <constraint firstItem="oom-es-Zq4" firstAttribute="top" secondItem="y3c-jy-aDJ" secondAttribute="bottom" constant="-20" id="K8Q-7q-0B9"/>
                             <constraint firstItem="9Ml-Me-US8" firstAttribute="top" secondItem="aNB-Jt-D3w" secondAttribute="top" id="KB0-9v-u0G"/>
@@ -103,8 +124,11 @@
                             <constraint firstItem="moL-qf-KEe" firstAttribute="top" secondItem="tM4-B7-Quz" secondAttribute="bottom" constant="20" id="WOZ-Gy-khw"/>
                             <constraint firstItem="oom-es-Zq4" firstAttribute="height" secondItem="W1c-d8-yTN" secondAttribute="height" id="Wm8-tu-0AM"/>
                             <constraint firstItem="oom-es-Zq4" firstAttribute="leading" secondItem="0Xn-58-DEw" secondAttribute="leading" id="cYQ-7N-s8r"/>
+                            <constraint firstItem="z4K-wz-D9i" firstAttribute="leading" secondItem="bXc-RS-hso" secondAttribute="leading" id="ccZ-4z-KFf"/>
+                            <constraint firstItem="bXc-RS-hso" firstAttribute="top" secondItem="z4K-wz-D9i" secondAttribute="bottom" constant="10" id="djC-Qg-XrH"/>
                             <constraint firstItem="rCx-Uq-N2K" firstAttribute="leading" secondItem="moL-qf-KEe" secondAttribute="leading" id="h6E-re-ywF"/>
                             <constraint firstItem="tM4-B7-Quz" firstAttribute="leading" secondItem="moL-qf-KEe" secondAttribute="leading" id="hJC-hO-K4h"/>
+                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="bXc-RS-hso" secondAttribute="bottom" constant="40" id="kzS-Fo-DRb"/>
                             <constraint firstAttribute="trailingMargin" secondItem="oom-es-Zq4" secondAttribute="trailing" constant="-16" id="obj-FY-ewn"/>
                             <constraint firstItem="oom-es-Zq4" firstAttribute="top" secondItem="9Ml-Me-US8" secondAttribute="top" constant="-50" id="qmg-8t-2pP"/>
                             <constraint firstItem="aNB-Jt-D3w" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leadingMargin" constant="20" id="t7E-b3-0Gj"/>

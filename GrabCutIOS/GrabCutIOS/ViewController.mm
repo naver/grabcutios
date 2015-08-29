@@ -237,4 +237,12 @@
     return NO;
 }
 
+-(IBAction) tapOnPhoto:(id)sender{
+    
+}
+
+-(IBAction) tapOnCamera:(id)sender{
+    
+}
+
 @end
