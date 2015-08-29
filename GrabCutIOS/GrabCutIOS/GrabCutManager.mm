@@ -57,7 +57,7 @@
     return cvMat;
 }
 
-- (cv::Mat1b)cvMatMaskerFromUIImage:(UIImage *) image prevResult:(cv::Mat1b)prevResult{
+- (cv::Mat1b)cvMatMaskerFromUIImage:(UIImage *) image{
     
     // First get the image into your data buffer
     CGImageRef imageRef = [image CGImage];
@@ -76,12 +76,11 @@
     CGContextDrawImage(context, CGRectMake(0, 0, width, height), imageRef);
     CGContextRelease(context);
     
-    cv::Mat1b markers((int)height, (int)width);
-    markers.setTo(cv::GC_PR_BGD);
-//    cv::Mat1b markers = prevResult;
-    
+    //    cv::Mat1b markers((int)height, (int)width);
+    //    markers.setTo(cv::GC_PR_BGD);
+    cv::Mat1b markers = mask;
     uchar* data =  markers.data;
-
+    
     int countFGD=0, countBGD=0, countRem = 0;
     
     for(int x = 0; x < width; x++){
@@ -93,10 +92,10 @@
             UInt8 alpha = rawData[byteIndex + 3];
             
             if(red == 255 && green == 255 && blue == 255 && alpha == 255){
-                data[width*y + x] = cv::GC_PR_FGD;
+                data[width*y + x] = cv::GC_FGD;
                 countFGD++;
             }else if(red == 0 && green == 0 && blue == 0 && alpha == 255){
-                data[width*y + x] = cv::GC_PR_BGD;
+                data[width*y + x] = cv::GC_BGD;
                 countBGD++;
             }else{
                 countRem++;
@@ -149,38 +148,73 @@
     return finalImage;
 }
 
+-(Mat3b) maskImageToMatrix:(CGSize)imageSize{
+    int cols = imageSize.width;
+    int rows = imageSize.height;
+    
+    cv::Mat cvMat(rows, cols, CV_8UC3); // 8 bits per component, 4 channels (color channels + alpha)
+    cvMat.setTo(0);
+    
+    uchar* data = mask.data;
+    
+    int fgd,bgd,pfgd,pbgd;
+    fgd = 0;
+    bgd = 0;
+    pfgd = 0;
+    pbgd = 0;
+    
+    for(int y = 0; y < rows; y++){
+        for( int x = 0; x < cols; x++){
+            int index = cols*y+x;
+            if(data[index] == GC_FGD){
+                cvMat.at<Vec3b>(cv::Point(x,y)) = Vec3b(255,0,0);
+                fgd++;
+            }else if(data[index] == GC_BGD){
+                cvMat.at<Vec3b>(cv::Point(x,y)) = Vec3b(0,255,0);
+                bgd++;
+            }else if(data[index] == GC_PR_FGD){
+                cvMat.at<Vec3b>(cv::Point(x,y)) = Vec3b(0,0,255);
+                pfgd++;
+            }else if(data[index] == GC_PR_BGD){
+                cvMat.at<Vec3b>(cv::Point(x,y)) = Vec3b(255,255,0);
+                pbgd++;
+            }
+        }
+    }
+    
+    NSLog(@"fgd : %d bgd : %d pfgd : %d pbgd : %d total : %d width*height : %d", fgd,bgd,pfgd,pbgd, fgd+bgd+pfgd+pbgd, cols*rows);
+    
+    return cvMat;
+}
 
-cv::Mat prevResult;
-cv::Mat bgModel,fgModel; // the models (internally used)
+-(void) resetManager{
+    mask.setTo(cv::GC_PR_BGD);
+    bgModel.setTo(0);
+    fgModel.setTo(0);
+}
 
 -(UIImage*) doGrabCut:(UIImage*)sourceImage foregroundBound:(CGRect)rect iterationCount:(int) iterCount{
     cv::Mat img=[self cvMatFromUIImage:sourceImage];
     cv::cvtColor(img , img , CV_RGBA2RGB);
     cv::Rect rectangle(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
-    cv::Mat result; // segmentation (4 possible values)
-
-
     
     // GrabCut segmentation
     cv::grabCut(img,    // input image
-                result,      // segmentation result
+                mask,      // segmentation result
                 rectangle,   // rectangle containing foreground
                 bgModel,fgModel, // models
                 iterCount,           // number of iterations
                 cv::GC_INIT_WITH_RECT); // use rectangle
     // Get the pixels marked as likely foreground
-    prevResult = result;
     
-    cv::compare(result,cv::GC_PR_FGD,result,cv::CMP_EQ);
-
+    cv::Mat tempMask;
+    cv::compare(mask,cv::GC_PR_FGD,tempMask,cv::CMP_EQ);
     // Generate output image
     cv::Mat foreground(img.size(),CV_8UC3,
                        cv::Scalar(255,255,255));
-
-    result=result&1;
     
-
-    img.copyTo(foreground, result);
+    tempMask=tempMask&1;
+    img.copyTo(foreground, tempMask);
     
     UIImage* resultImage=[self UIImageFromCVMat:foreground];
     
@@ -191,33 +225,33 @@ cv::Mat bgModel,fgModel; // the models (internally used)
     cv::Mat img=[self cvMatFromUIImage:sourceImage];
     cv::cvtColor(img , img , CV_RGBA2RGB);
     
-    cv::Mat1b markers=[self cvMatMaskerFromUIImage:maskImage prevResult:prevResult];
+    cv::Mat1b markers=[self cvMatMaskerFromUIImage:maskImage];
     cv::Rect rectangle(0,0,0,0);
-    
-//    cv::Mat result; // segmentation (4 possible values)
-//    cv::Mat bgModel,fgModel; // the models (internally used)
-    
     // GrabCut segmentation
     cv::grabCut(img, markers, rectangle, bgModel, fgModel, iterCount, cv::GC_INIT_WITH_MASK);
-//
-//    // Get the pixels marked as likely foreground
-    cv::compare(markers,cv::GC_PR_FGD,markers,cv::CMP_EQ);
+    
+    cv::Mat tempMask;
+    cv::compare(mask,cv::GC_PR_FGD,tempMask,cv::CMP_EQ);
     // Generate output image
     cv::Mat foreground(img.size(),CV_8UC3,
                        cv::Scalar(255,255,255));
-    markers=markers&1;
-    img.copyTo(foreground, markers);
-
+    
+    tempMask=tempMask&1;
+    img.copyTo(foreground, tempMask);
+    
     UIImage* resultImage=[self UIImageFromCVMat:foreground];
-
     
-//    cv::Mat1b mask_fgpf = ( markers == cv::GC_FGD) | ( markers == cv::GC_PR_FGD);
-//    // and copy all the foreground-pixels to a temporary image
-//    cv::Mat3b tmp = cv::Mat3b::zeros(img.rows, img.cols);
-//    img.copyTo(tmp, mask_fgpf);
-
+    //    UIImage* resultImage =[self UIImageFromCVMat:[self maskImageToMatrix:sourceImage.size]];
     
-//    UIImage* resultImage=[self UIImageFromCVMat:tmp];
+    
+    //    UIImage* resultImage=[self UIImageFromCVMat:[self maskImageToMatrix:sourceImage.size]];
+    //    cv::Mat1b mask_fgpf = ( markers == cv::GC_FGD) | ( markers == cv::GC_PR_FGD);
+    //    // and copy all the foreground-pixels to a temporary image
+    //    cv::Mat3b tmp = cv::Mat3b::zeros(img.rows, img.cols);
+    //    img.copyTo(tmp, mask_fgpf);
+    
+    
+    //    UIImage* resultImage=[self UIImageFromCVMat:tmp];
     
     return resultImage;
 }
