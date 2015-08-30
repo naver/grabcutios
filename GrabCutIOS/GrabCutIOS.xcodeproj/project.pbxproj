@@ -18,6 +18,7 @@
 		905F61161B91A43B00094E52 /* GrabCutManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 905F61121B91A43B00094E52 /* GrabCutManager.mm */; };
 		905F61171B91A43B00094E52 /* test.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 905F61131B91A43B00094E52 /* test.jpg */; };
 		905F61181B91A43B00094E52 /* TouchDrawView.m in Sources */ = {isa = PBXBuildFile; fileRef = 905F61151B91A43B00094E52 /* TouchDrawView.m */; };
+		90DE070C1B92A4FA009311B8 /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 90DE070B1B92A4FA009311B8 /* MobileCoreServices.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,6 +52,7 @@
 		905F61131B91A43B00094E52 /* test.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = test.jpg; sourceTree = "<group>"; };
 		905F61141B91A43B00094E52 /* TouchDrawView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TouchDrawView.h; sourceTree = "<group>"; };
 		905F61151B91A43B00094E52 /* TouchDrawView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TouchDrawView.m; sourceTree = "<group>"; };
+		90DE070B1B92A4FA009311B8 /* MobileCoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MobileCoreServices.framework; path = System/Library/Frameworks/MobileCoreServices.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,6 +60,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				90DE070C1B92A4FA009311B8 /* MobileCoreServices.framework in Frameworks */,
 				905F610E1B91A2C800094E52 /* opencv2.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -75,6 +78,7 @@
 		905F60DB1B919E8C00094E52 = {
 			isa = PBXGroup;
 			children = (
+				90DE070B1B92A4FA009311B8 /* MobileCoreServices.framework */,
 				905F61101B91A3B700094E52 /* GrabCutIOSPrefix.pch */,
 				905F610D1B91A2C800094E52 /* opencv2.framework */,
 				905F60E61B919E8C00094E52 /* GrabCutIOS */,
@@ -452,6 +456,7 @@
 				905F61091B919E8C00094E52 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		905F610A1B919E8C00094E52 /* Build configuration list for PBXNativeTarget "GrabCutIOSTests" */ = {
 			isa = XCConfigurationList;
@@ -460,6 +465,7 @@
 				905F610C1B919E8C00094E52 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

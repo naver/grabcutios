@@ -9,9 +9,10 @@
 #import "ViewController.h"
 #import "GrabCutManager.h"
 #import "TouchDrawView.h"
+#import <MobileCoreServices/UTCoreTypes.h>
 
 
-@interface ViewController ()
+@interface ViewController ()<UINavigationControllerDelegate, UIImagePickerControllerDelegate>
 @property (weak, nonatomic) IBOutlet UIImageView *imageView;
 @property (weak, nonatomic) IBOutlet UIImageView *resultImageView;
 @property (nonatomic) CGPoint startPoint;
@@ -26,6 +27,7 @@
 @property (nonatomic, assign) TouchState touchState;
 @property (nonatomic, assign) CGRect grabRect;
 @property (nonatomic, strong) UIImage* originalImage;
+@property (nonatomic, strong) UIImagePickerController* imagePicker;
 
 @end
 
@@ -35,6 +37,12 @@
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
     _grabcut = [[GrabCutManager alloc] init];
+    
+    _originalImage = [UIImage imageNamed:@"test.jpg"];
+    [self initStates];
+}
+
+-(void) initStates{
     _touchState = TouchStateNone;
     [self updateStateLabel];
     
@@ -43,7 +51,6 @@
     _minusButton.enabled = NO;
     _doGrabcutButton.enabled = NO;
     
-    _originalImage = [UIImage imageNamed:@"test.jpg"];
 }
 
 -(NSString*) getTouchStateToString{
@@ -238,10 +245,115 @@
 }
 
 -(IBAction) tapOnPhoto:(id)sender{
-    
+    [self startMediaBrowserFromViewController: self
+                                usingDelegate: self];
 }
 
 -(IBAction) tapOnCamera:(id)sender{
+    [self startCameraControllerFromViewController: self
+                                    usingDelegate: self];
+
+}
+
+-(void) setImageToTarget:(UIImage*)image{
+    _originalImage = image;
+    _imageView.image = _originalImage;
+    [self initStates];
+    [self.grabcut resetManager];
+}
+
+- (BOOL) startCameraControllerFromViewController: (UIViewController*) controller
+                                   usingDelegate: (id <UIImagePickerControllerDelegate,
+                                                   UINavigationControllerDelegate>) delegate {
+    
+    if (([UIImagePickerController isSourceTypeAvailable:
+          UIImagePickerControllerSourceTypeCamera] == NO)
+        || (delegate == nil)
+        || (controller == nil))
+        return NO;
+    
+    
+    self.imagePicker = [[UIImagePickerController alloc] init];
+    self.imagePicker.sourceType = UIImagePickerControllerSourceTypeCamera;
+    
+    // Displays a control that allows the user to choose picture or
+    // movie capture, if both are available:
+//    self.imagePicker.mediaTypes = [UIImagePickerController availableMediaTypesForSourceType:UIImagePickerControllerSourceTypeCamera];
+    self.imagePicker.mediaTypes = @[(NSString *)kUTTypeImage];
+
+    
+    // Hides the controls for moving & scaling pictures, or for
+    // trimming movies. To instead show the controls, use YES.
+    self.imagePicker.allowsEditing = NO;
+    
+    self.imagePicker.delegate = delegate;
+    
+    [controller presentViewController:self.imagePicker animated:YES completion:nil];
+    return YES;
+}
+
+- (BOOL) startMediaBrowserFromViewController: (UIViewController*) controller
+                               usingDelegate: (id <UIImagePickerControllerDelegate,
+                                               UINavigationControllerDelegate>) delegate {
+    
+    if (([UIImagePickerController isSourceTypeAvailable:
+          UIImagePickerControllerSourceTypeSavedPhotosAlbum] == NO)
+        || (delegate == nil)
+        || (controller == nil))
+        return NO;
+    
+    self.imagePicker = [[UIImagePickerController alloc] init];
+    self.imagePicker.sourceType = UIImagePickerControllerSourceTypeSavedPhotosAlbum;
+    
+    // Displays saved pictures and movies, if both are available, from the
+    // Camera Roll album.
+    self.imagePicker.mediaTypes = @[(NSString *)kUTTypeImage];
+//    [UIImagePickerController availableMediaTypesForSourceType:
+//     UIImagePickerControllerSourceTypeSavedPhotosAlbum];
+    
+    // Hides the controls for moving & scaling pictures, or for
+    // trimming movies. To instead show the controls, use YES.
+    self.imagePicker.allowsEditing = NO;
+    
+    self.imagePicker.delegate = delegate;
+    
+    [controller presentViewController:self.imagePicker animated:YES completion:nil];
+    return YES;
+}
+
+// For responding to the user tapping Cancel.
+- (void) imagePickerControllerDidCancel: (UIImagePickerController *) picker {
+    
+    [self.imagePicker dismissViewControllerAnimated:YES completion:nil];
+    self.imagePicker =nil;
+}
+
+// For responding to the user accepting a newly-captured picture or movie
+- (void) imagePickerController: (UIImagePickerController *) picker
+ didFinishPickingMediaWithInfo: (NSDictionary *) info {
+    
+    NSString *mediaType = [info objectForKey: UIImagePickerControllerMediaType];
+    UIImage *originalImage, *editedImage, *resultImage;
+    
+    if (CFStringCompare ((CFStringRef) mediaType, kUTTypeImage, 0)
+        == kCFCompareEqualTo) {
+        
+        editedImage = (UIImage *) [info objectForKey:
+                                   UIImagePickerControllerEditedImage];
+        originalImage = (UIImage *) [info objectForKey:
+                                     UIImagePickerControllerOriginalImage];
+        
+        if (editedImage) {
+            resultImage = editedImage;
+        } else {
+            resultImage = originalImage;
+        }
+    }
+    
+    [self setImageToTarget:resultImage];
+    
+    [self.imagePicker dismissViewControllerAnimated:YES completion:nil];
+    self.imagePicker = nil;
     
 }
 
