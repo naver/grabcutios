@@ -29,6 +29,9 @@
 @property (nonatomic, strong) UIImage* originalImage;
 @property (nonatomic, strong) UIImagePickerController* imagePicker;
 
+@property (nonatomic) UIActivityIndicatorView *spinner;
+@property (nonatomic) UIView* dimmedView;
+
 @end
 
 @implementation ViewController
@@ -119,18 +122,32 @@
 }
 
 -(void) doGrabcut{
-    UIImage* resultImage= [_grabcut doGrabCut:_originalImage foregroundBound:_grabRect iterationCount:5];
+    [self showLoadingIndicatorView];
     
-    [self.resultImageView setImage:resultImage];
-    [self.imageView setAlpha:0.2];
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,
+                                             (unsigned long)NULL), ^(void) {
+        UIImage* resultImage= [_grabcut doGrabCut:_originalImage foregroundBound:_grabRect iterationCount:5];
+        dispatch_async(dispatch_get_main_queue(), ^(void) {
+            [self.resultImageView setImage:resultImage];
+            [self.imageView setAlpha:0.2];
+            
+            [self hideLoadingIndicatorView];
+        });
+    });
 }
 
 -(void) doGrabcutWithMaskImage:(UIImage*)image{
-    UIImage* resultImage= [_grabcut doGrabCutWithMask:_originalImage maskImage:[self resizeImage:image size:_originalImage.size] iterationCount:5];
+    [self showLoadingIndicatorView];
     
-    [self.resultImageView setImage:resultImage];
-    
-    [self.imageView setAlpha:0.2];
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,
+                                             (unsigned long)NULL), ^(void) {
+        UIImage* resultImage= [_grabcut doGrabCutWithMask:_originalImage maskImage:[self resizeImage:image size:_originalImage.size] iterationCount:5];
+        dispatch_async(dispatch_get_main_queue(), ^(void) {
+            [self.resultImageView setImage:resultImage];
+            [self.imageView setAlpha:0.2];
+            [self hideLoadingIndicatorView];
+        });
+    });
 }
 
 -(void) touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event{
@@ -230,7 +247,7 @@
         
         [self.touchDrawView clear];
         _rectButton.enabled = NO;
-        _plusButton.enabled = NO;
+        _plusButton.enabled = YES;
         _minusButton.enabled = YES;
         _doGrabcutButton.enabled = YES;
     }
@@ -243,6 +260,8 @@
     
     return NO;
 }
+
+#pragma mark - Image Picker
 
 -(IBAction) tapOnPhoto:(id)sender{
     [self startMediaBrowserFromViewController: self
@@ -356,5 +375,52 @@
     self.imagePicker = nil;
     
 }
+
+#pragma mark - Indicator
+
+CG_INLINE CGRect
+CGRectSetOrigin(CGRect rect, CGPoint origin)
+{
+    rect.origin = origin;
+    return rect;
+}
+
+- (void)showLoadingIndicatorView
+{
+    [self showLoadingIndicatorViewWithStyle:UIActivityIndicatorViewStyleWhite];
+}
+
+- (void)showLoadingIndicatorViewWithStyle:(UIActivityIndicatorViewStyle)activityIndicatorViewStyle
+{
+    if (self.spinner != nil) {
+        [self hideLoadingIndicatorView];
+    }
+    
+    self.dimmedView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height)];
+    [self.dimmedView setBackgroundColor:[UIColor colorWithRed:0 green:0 blue:0 alpha:0.7]];
+    [self.view addSubview:self.dimmedView];
+    
+    UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:activityIndicatorViewStyle];
+    spinner.frame = CGRectSetOrigin(spinner.frame, CGPointMake(floorf(CGRectGetMidX(self.view.bounds) - CGRectGetMidX(spinner.bounds)), floorf(CGRectGetMidY(self.view.bounds) - CGRectGetMidY(spinner.bounds))));
+    spinner.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin|UIViewAutoresizingFlexibleRightMargin|UIViewAutoresizingFlexibleTopMargin|UIViewAutoresizingFlexibleBottomMargin;
+    [spinner startAnimating];
+    [self.view addSubview:spinner];
+    self.spinner = spinner;
+    
+    [self.view setUserInteractionEnabled:NO];
+}
+
+- (void)hideLoadingIndicatorView
+{
+    [self.spinner stopAnimating];
+    [self.spinner removeFromSuperview];
+    self.spinner = nil;
+    
+    [self.dimmedView removeFromSuperview];
+    self.dimmedView = nil;
+    
+    [self.view setUserInteractionEnabled:YES];
+}
+
 
 @end
