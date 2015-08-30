@@ -11,6 +11,7 @@
 #import "TouchDrawView.h"
 #import <MobileCoreServices/UTCoreTypes.h>
 
+static inline double radians (double degrees) {return degrees * M_PI/180;}
 
 @interface ViewController ()<UINavigationControllerDelegate, UIImagePickerControllerDelegate>
 @property (weak, nonatomic) IBOutlet UIImageView *imageView;
@@ -121,15 +122,86 @@
     return scaledImage;
 }
 
+-(UIImage*) resizeWithRotation:(UIImage *) sourceImage size:(CGSize) targetSize
+{
+    CGFloat targetWidth = targetSize.width;
+    CGFloat targetHeight = targetSize.height;
+    
+    CGImageRef imageRef = [sourceImage CGImage];
+    CGBitmapInfo bitmapInfo = CGImageGetBitmapInfo(imageRef);
+    CGColorSpaceRef colorSpaceInfo = CGImageGetColorSpace(imageRef);
+    
+    if (bitmapInfo == kCGImageAlphaNone) {
+        bitmapInfo = kCGImageAlphaNoneSkipLast;
+    }
+    
+    CGContextRef bitmap;
+    
+    if (sourceImage.imageOrientation == UIImageOrientationUp || sourceImage.imageOrientation == UIImageOrientationDown) {
+        bitmap = CGBitmapContextCreate(NULL, targetWidth, targetHeight, CGImageGetBitsPerComponent(imageRef), CGImageGetBytesPerRow(imageRef), colorSpaceInfo, bitmapInfo);
+        
+    } else {
+        bitmap = CGBitmapContextCreate(NULL, targetHeight, targetWidth, CGImageGetBitsPerComponent(imageRef), CGImageGetBytesPerRow(imageRef), colorSpaceInfo, bitmapInfo);
+        
+    }
+    
+    if (sourceImage.imageOrientation == UIImageOrientationLeft) {
+        CGContextRotateCTM (bitmap, radians(90));
+        CGContextTranslateCTM (bitmap, 0, -targetHeight);
+        
+    } else if (sourceImage.imageOrientation == UIImageOrientationRight) {
+        CGContextRotateCTM (bitmap, radians(-90));
+        CGContextTranslateCTM (bitmap, -targetWidth, 0);
+        
+    } else if (sourceImage.imageOrientation == UIImageOrientationUp) {
+        // NOTHING
+    } else if (sourceImage.imageOrientation == UIImageOrientationDown) {
+        CGContextTranslateCTM (bitmap, targetWidth, targetHeight);
+        CGContextRotateCTM (bitmap, radians(-180.));
+    }
+    
+    CGContextDrawImage(bitmap, CGRectMake(0, 0, targetWidth, targetHeight), imageRef);
+    CGImageRef ref = CGBitmapContextCreateImage(bitmap);
+    UIImage* newImage = [UIImage imageWithCGImage:ref];
+    
+    CGContextRelease(bitmap);
+    CGImageRelease(ref);
+    
+    return newImage; 
+}
+
+-(UIImage *) masking:(UIImage*)sourceImage mask:(UIImage*) maskImage{
+    //Mask Image
+    CGImageRef maskRef = maskImage.CGImage;
+    
+    CGImageRef mask = CGImageMaskCreate(CGImageGetWidth(maskRef),
+                                        CGImageGetHeight(maskRef),
+                                        CGImageGetBitsPerComponent(maskRef),
+                                        CGImageGetBitsPerPixel(maskRef),
+                                        CGImageGetBytesPerRow(maskRef),
+                                        CGImageGetDataProvider(maskRef), NULL, false);
+    
+    CGImageRef masked = CGImageCreateWithMask([sourceImage CGImage], mask);
+    CGImageRelease(mask);
+    
+    UIImage *maskedImage = [UIImage imageWithCGImage:masked];
+    
+    CGImageRelease(masked);
+    
+    return maskedImage;
+}
+
 -(void) doGrabcut{
     [self showLoadingIndicatorView];
     
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,
                                              (unsigned long)NULL), ^(void) {
         UIImage* resultImage= [_grabcut doGrabCut:_originalImage foregroundBound:_grabRect iterationCount:5];
+        resultImage = [self masking:self.originalImage mask:resultImage];
+        
         dispatch_async(dispatch_get_main_queue(), ^(void) {
             [self.resultImageView setImage:resultImage];
-            [self.imageView setAlpha:0.2];
+            [self.imageView setAlpha:0.0];
             
             [self hideLoadingIndicatorView];
         });
@@ -144,7 +216,7 @@
         UIImage* resultImage= [_grabcut doGrabCutWithMask:_originalImage maskImage:[self resizeImage:image size:_originalImage.size] iterationCount:5];
         dispatch_async(dispatch_get_main_queue(), ^(void) {
             [self.resultImageView setImage:resultImage];
-            [self.imageView setAlpha:0.2];
+            [self.imageView setAlpha:0.0];
             [self hideLoadingIndicatorView];
         });
     });
