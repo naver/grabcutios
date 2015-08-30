@@ -191,33 +191,61 @@ static inline double radians (double degrees) {return degrees * M_PI/180;}
     return maskedImage;
 }
 
+-(CGSize) getResizeForTimeReduce:(UIImage*) image{
+    CGFloat ratio = image.size.width/ image.size.height;
+    
+    if([image size].width > [image size].height){
+
+        
+        if(image.size.width > 400){
+            return CGSizeMake(400, 400/ratio);
+        }else{
+            return image.size;
+        }
+        
+    }else{
+        if(image.size.height > 400){
+            return CGSizeMake(ratio/400, 400);
+        }else{
+            return image.size;
+        }
+    }
+}
+
 -(void) doGrabcut{
     [self showLoadingIndicatorView];
-    
+
+    __weak typeof(self)weakSelf = self;
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,
                                              (unsigned long)NULL), ^(void) {
-        UIImage* resultImage= [_grabcut doGrabCut:_originalImage foregroundBound:_grabRect iterationCount:5];
-        resultImage = [self masking:self.originalImage mask:resultImage];
+        CGSize resize = [weakSelf getResizeForTimeReduce:weakSelf.originalImage];
+        
+        UIImage* resizedImage = [weakSelf resizeWithRotation:weakSelf.originalImage size:resize];
+        
+        UIImage* resultImage= [weakSelf.grabcut doGrabCut:weakSelf.originalImage foregroundBound:weakSelf.grabRect iterationCount:5];
+        resultImage = [weakSelf masking:weakSelf.originalImage mask:resultImage];
         
         dispatch_async(dispatch_get_main_queue(), ^(void) {
-            [self.resultImageView setImage:resultImage];
-            [self.imageView setAlpha:0.0];
+            [weakSelf.resultImageView setImage:resultImage];
+            [weakSelf.imageView setAlpha:0.0];
             
-            [self hideLoadingIndicatorView];
+            [weakSelf hideLoadingIndicatorView];
         });
     });
 }
 
 -(void) doGrabcutWithMaskImage:(UIImage*)image{
     [self showLoadingIndicatorView];
+
+    __weak typeof(self)weakSelf = self;
     
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,
                                              (unsigned long)NULL), ^(void) {
-        UIImage* resultImage= [_grabcut doGrabCutWithMask:_originalImage maskImage:[self resizeImage:image size:_originalImage.size] iterationCount:5];
+        UIImage* resultImage= [weakSelf.grabcut doGrabCutWithMask:_originalImage maskImage:[weakSelf resizeImage:image size:_originalImage.size] iterationCount:5];
         dispatch_async(dispatch_get_main_queue(), ^(void) {
-            [self.resultImageView setImage:resultImage];
-            [self.imageView setAlpha:0.0];
-            [self hideLoadingIndicatorView];
+            [weakSelf.resultImageView setImage:resultImage];
+            [weakSelf.imageView setAlpha:0.0];
+            [weakSelf hideLoadingIndicatorView];
         });
     });
 }
