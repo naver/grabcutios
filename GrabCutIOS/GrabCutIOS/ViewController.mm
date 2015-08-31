@@ -12,6 +12,7 @@
 #import <MobileCoreServices/UTCoreTypes.h>
 
 static inline double radians (double degrees) {return degrees * M_PI/180;}
+const static int MAX_IMAGE_LENGTH = 400;
 
 @interface ViewController ()<UINavigationControllerDelegate, UIImagePickerControllerDelegate>
 @property (weak, nonatomic) IBOutlet UIImageView *imageView;
@@ -28,6 +29,7 @@ static inline double radians (double degrees) {return degrees * M_PI/180;}
 @property (nonatomic, assign) TouchState touchState;
 @property (nonatomic, assign) CGRect grabRect;
 @property (nonatomic, strong) UIImage* originalImage;
+@property (nonatomic, strong) UIImage* resizedImage;
 @property (nonatomic, strong) UIImagePickerController* imagePicker;
 
 @property (nonatomic) UIActivityIndicatorView *spinner;
@@ -43,6 +45,8 @@ static inline double radians (double degrees) {return degrees * M_PI/180;}
     _grabcut = [[GrabCutManager alloc] init];
     
     _originalImage = [UIImage imageNamed:@"test.jpg"];
+    _resizedImage = [self getProperResizedImage:_originalImage];
+    
     [self initStates];
 }
 
@@ -55,6 +59,22 @@ static inline double radians (double degrees) {return degrees * M_PI/180;}
     _minusButton.enabled = NO;
     _doGrabcutButton.enabled = NO;
     
+}
+                     
+-(UIImage *) getProperResizedImage:(UIImage*)original{
+    float ratio = original.size.width/original.size.height;
+    
+    if(original.size.width > original.size.height){
+        if(original.size.width > MAX_IMAGE_LENGTH){
+            return [self resizeWithRotation:original size:CGSizeMake(MAX_IMAGE_LENGTH, MAX_IMAGE_LENGTH/ratio)];
+        }
+    }else{
+        if(original.size.height > MAX_IMAGE_LENGTH){
+            return [self resizeWithRotation:original size:CGSizeMake(MAX_IMAGE_LENGTH*ratio, MAX_IMAGE_LENGTH)];
+        }
+    }
+    
+    return original;
 }
 
 -(NSString*) getTouchStateToString{
@@ -218,12 +238,8 @@ static inline double radians (double degrees) {return degrees * M_PI/180;}
     __weak typeof(self)weakSelf = self;
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,
                                              (unsigned long)NULL), ^(void) {
-        CGSize resize = [weakSelf getResizeForTimeReduce:weakSelf.originalImage];
-        
-        UIImage* resizedImage = [weakSelf resizeWithRotation:weakSelf.originalImage size:resize];
-        
-        UIImage* resultImage= [weakSelf.grabcut doGrabCut:weakSelf.originalImage foregroundBound:weakSelf.grabRect iterationCount:5];
-        resultImage = [weakSelf masking:weakSelf.originalImage mask:resultImage];
+        UIImage* resultImage= [weakSelf.grabcut doGrabCut:weakSelf.resizedImage foregroundBound:weakSelf.grabRect iterationCount:5];
+        resultImage = [weakSelf masking:weakSelf.originalImage mask:[weakSelf resizeImage:resultImage size:weakSelf.originalImage.size]];
         
         dispatch_async(dispatch_get_main_queue(), ^(void) {
             [weakSelf.resultImageView setImage:resultImage];
@@ -241,7 +257,8 @@ static inline double radians (double degrees) {return degrees * M_PI/180;}
     
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,
                                              (unsigned long)NULL), ^(void) {
-        UIImage* resultImage= [weakSelf.grabcut doGrabCutWithMask:_originalImage maskImage:[weakSelf resizeImage:image size:_originalImage.size] iterationCount:5];
+        UIImage* resultImage= [weakSelf.grabcut doGrabCutWithMask:weakSelf.resizedImage maskImage:[weakSelf resizeImage:image size:weakSelf.resizedImage.size] iterationCount:5];
+        resultImage = [weakSelf masking:weakSelf.originalImage mask:[weakSelf resizeImage:resultImage size:weakSelf.originalImage.size]];
         dispatch_async(dispatch_get_main_queue(), ^(void) {
             [weakSelf.resultImageView setImage:resultImage];
             [weakSelf.imageView setAlpha:0.0];
@@ -281,7 +298,7 @@ static inline double radians (double degrees) {return degrees * M_PI/180;}
     self.endPoint = [touch locationInView:self.imageView];
     
     if(_touchState == TouchStateRect){
-        _grabRect = [self getTouchedRectWithImageSize:_originalImage.size];
+        _grabRect = [self getTouchedRectWithImageSize:_resizedImage.size];
     }else if(_touchState == TouchStatePlus || _touchState == TouchStateMinus){
         [self.touchDrawView touchEnded:self.endPoint];
         _doGrabcutButton.enabled = YES;
@@ -376,6 +393,7 @@ static inline double radians (double degrees) {return degrees * M_PI/180;}
 
 -(void) setImageToTarget:(UIImage*)image{
     _originalImage = image;
+    _resizedImage = [self getProperResizedImage:_originalImage];
     _imageView.image = _originalImage;
     [self initStates];
     [self.grabcut resetManager];
