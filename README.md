@@ -9,6 +9,9 @@ GrabCut is an image segmentation method based on graph cuts. The algorithm was d
 ## Usage
 
 ## Limitation
+This program use OpenCV library.
+It is too big to use for real service.(76.8MB)
+So I'm going to implement the GrabCut Algorithm without OpenCV to reduce App size.
 
 ## References
 * C. Rother, V. Kolmogorov, and A. Blake, GrabCut: Interactive foreground extraction using iterated graph cuts, ACM Trans. Graph., vol. 23, pp. 309–314, 2004.
