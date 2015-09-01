@@ -1,4 +1,5 @@
 # GrabCutIOS
+GrabCut is an image segmentation method based on graph cuts. The algorithm was designed by Carsten Rother, Vladimir Kolmogorov & Andrew Blake from Microsoft Research Cambridge, UK. in their paper, "GrabCut": interactive foreground extraction using iterated graph cuts . An algorithm was needed for foreground extraction with minimal user interaction, and the result was GrabCut.
 
 ## Screenshot
 ![screenshot](http://jsharpsite.zz.mu/docs/screenshot.png)
@@ -7,7 +8,9 @@
 
 ## Limitation
 
-## Reference
+## References
+* C. Rother, V. Kolmogorov, and A. Blake, GrabCut: Interactive foreground extraction using iterated graph cuts, ACM Trans. Graph., vol. 23, pp. 309–314, 2004.
+* http://docs.opencv.org/master/d8/d83/tutorial_py_grabcut.html#gsc.tab=0
 
 ## License
 GrabCutIOS is licensed under the Apache License, Version 2.0.
