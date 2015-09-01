@@ -19,7 +19,7 @@ So I'm going to implement the GrabCut Algorithm without OpenCV to reduce App siz
 
 ## License
 GrabCutIOS is licensed under the Apache License, Version 2.0.
-See [LICENSE](LICENSE.txt) for full license text.
+See [LICENSE](/files/79302) for full license text.
 
         Copyright (c) 2015 Naver Corp.
         @Author Eunchul Jeon
