@@ -392,7 +392,7 @@ const static int MAX_IMAGE_LENGTH = 400;
 }
 
 -(void) setImageToTarget:(UIImage*)image{
-    _originalImage = image;
+    _originalImage = [self resizeWithRotation:image size:image.size];
     _resizedImage = [self getProperResizedImage:_originalImage];
     _imageView.image = _originalImage;
     [self initStates];
