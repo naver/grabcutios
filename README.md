@@ -1,7 +1,7 @@
 # GrabCutIOS
 
 ## Screenshot
-![screenshot](doc/img/screenshot.png)
+![screenshot](doc/screenshot.png)
 
 ## Usage
 
