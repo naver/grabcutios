@@ -152,6 +152,6 @@
         </scene>
     </scenes>
     <resources>
-        <image name="test.jpg" width="400" height="300"/>
+        <image name="test.jpg" width="1600" height="1200"/>
     </resources>
 </document>

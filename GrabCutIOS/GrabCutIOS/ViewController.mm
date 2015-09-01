@@ -11,6 +11,8 @@
 #import "TouchDrawView.h"
 #import <MobileCoreServices/UTCoreTypes.h>
 
+static inline double radians (double degrees) {return degrees * M_PI/180;}
+const static int MAX_IMAGE_LENGTH = 400;
 
 @interface ViewController ()<UINavigationControllerDelegate, UIImagePickerControllerDelegate>
 @property (weak, nonatomic) IBOutlet UIImageView *imageView;
@@ -27,6 +29,7 @@
 @property (nonatomic, assign) TouchState touchState;
 @property (nonatomic, assign) CGRect grabRect;
 @property (nonatomic, strong) UIImage* originalImage;
+@property (nonatomic, strong) UIImage* resizedImage;
 @property (nonatomic, strong) UIImagePickerController* imagePicker;
 
 @property (nonatomic) UIActivityIndicatorView *spinner;
@@ -42,6 +45,8 @@
     _grabcut = [[GrabCutManager alloc] init];
     
     _originalImage = [UIImage imageNamed:@"test.jpg"];
+    _resizedImage = [self getProperResizedImage:_originalImage];
+    
     [self initStates];
 }
 
@@ -54,6 +59,22 @@
     _minusButton.enabled = NO;
     _doGrabcutButton.enabled = NO;
     
+}
+                     
+-(UIImage *) getProperResizedImage:(UIImage*)original{
+    float ratio = original.size.width/original.size.height;
+    
+    if(original.size.width > original.size.height){
+        if(original.size.width > MAX_IMAGE_LENGTH){
+            return [self resizeWithRotation:original size:CGSizeMake(MAX_IMAGE_LENGTH, MAX_IMAGE_LENGTH/ratio)];
+        }
+    }else{
+        if(original.size.height > MAX_IMAGE_LENGTH){
+            return [self resizeWithRotation:original size:CGSizeMake(MAX_IMAGE_LENGTH*ratio, MAX_IMAGE_LENGTH)];
+        }
+    }
+    
+    return original;
 }
 
 -(NSString*) getTouchStateToString{
@@ -121,31 +142,127 @@
     return scaledImage;
 }
 
+-(UIImage*) resizeWithRotation:(UIImage *) sourceImage size:(CGSize) targetSize
+{
+    CGFloat targetWidth = targetSize.width;
+    CGFloat targetHeight = targetSize.height;
+    
+    CGImageRef imageRef = [sourceImage CGImage];
+    CGBitmapInfo bitmapInfo = CGImageGetBitmapInfo(imageRef);
+    CGColorSpaceRef colorSpaceInfo = CGImageGetColorSpace(imageRef);
+    
+    if (bitmapInfo == kCGImageAlphaNone) {
+        bitmapInfo = kCGImageAlphaNoneSkipLast;
+    }
+    
+    CGContextRef bitmap;
+    
+    if (sourceImage.imageOrientation == UIImageOrientationUp || sourceImage.imageOrientation == UIImageOrientationDown) {
+        bitmap = CGBitmapContextCreate(NULL, targetWidth, targetHeight, CGImageGetBitsPerComponent(imageRef), CGImageGetBytesPerRow(imageRef), colorSpaceInfo, bitmapInfo);
+        
+    } else {
+        bitmap = CGBitmapContextCreate(NULL, targetHeight, targetWidth, CGImageGetBitsPerComponent(imageRef), CGImageGetBytesPerRow(imageRef), colorSpaceInfo, bitmapInfo);
+        
+    }
+    
+    if (sourceImage.imageOrientation == UIImageOrientationLeft) {
+        CGContextRotateCTM (bitmap, radians(90));
+        CGContextTranslateCTM (bitmap, 0, -targetHeight);
+        
+    } else if (sourceImage.imageOrientation == UIImageOrientationRight) {
+        CGContextRotateCTM (bitmap, radians(-90));
+        CGContextTranslateCTM (bitmap, -targetWidth, 0);
+        
+    } else if (sourceImage.imageOrientation == UIImageOrientationUp) {
+        // NOTHING
+    } else if (sourceImage.imageOrientation == UIImageOrientationDown) {
+        CGContextTranslateCTM (bitmap, targetWidth, targetHeight);
+        CGContextRotateCTM (bitmap, radians(-180.));
+    }
+    
+    CGContextDrawImage(bitmap, CGRectMake(0, 0, targetWidth, targetHeight), imageRef);
+    CGImageRef ref = CGBitmapContextCreateImage(bitmap);
+    UIImage* newImage = [UIImage imageWithCGImage:ref];
+    
+    CGContextRelease(bitmap);
+    CGImageRelease(ref);
+    
+    return newImage; 
+}
+
+-(UIImage *) masking:(UIImage*)sourceImage mask:(UIImage*) maskImage{
+    //Mask Image
+    CGImageRef maskRef = maskImage.CGImage;
+    
+    CGImageRef mask = CGImageMaskCreate(CGImageGetWidth(maskRef),
+                                        CGImageGetHeight(maskRef),
+                                        CGImageGetBitsPerComponent(maskRef),
+                                        CGImageGetBitsPerPixel(maskRef),
+                                        CGImageGetBytesPerRow(maskRef),
+                                        CGImageGetDataProvider(maskRef), NULL, false);
+    
+    CGImageRef masked = CGImageCreateWithMask([sourceImage CGImage], mask);
+    CGImageRelease(mask);
+    
+    UIImage *maskedImage = [UIImage imageWithCGImage:masked];
+    
+    CGImageRelease(masked);
+    
+    return maskedImage;
+}
+
+-(CGSize) getResizeForTimeReduce:(UIImage*) image{
+    CGFloat ratio = image.size.width/ image.size.height;
+    
+    if([image size].width > [image size].height){
+
+        
+        if(image.size.width > 400){
+            return CGSizeMake(400, 400/ratio);
+        }else{
+            return image.size;
+        }
+        
+    }else{
+        if(image.size.height > 400){
+            return CGSizeMake(ratio/400, 400);
+        }else{
+            return image.size;
+        }
+    }
+}
+
 -(void) doGrabcut{
     [self showLoadingIndicatorView];
-    
+
+    __weak typeof(self)weakSelf = self;
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,
                                              (unsigned long)NULL), ^(void) {
-        UIImage* resultImage= [_grabcut doGrabCut:_originalImage foregroundBound:_grabRect iterationCount:5];
+        UIImage* resultImage= [weakSelf.grabcut doGrabCut:weakSelf.resizedImage foregroundBound:weakSelf.grabRect iterationCount:5];
+        resultImage = [weakSelf masking:weakSelf.originalImage mask:[weakSelf resizeImage:resultImage size:weakSelf.originalImage.size]];
+        
         dispatch_async(dispatch_get_main_queue(), ^(void) {
-            [self.resultImageView setImage:resultImage];
-            [self.imageView setAlpha:0.2];
+            [weakSelf.resultImageView setImage:resultImage];
+            [weakSelf.imageView setAlpha:0.0];
             
-            [self hideLoadingIndicatorView];
+            [weakSelf hideLoadingIndicatorView];
         });
     });
 }
 
 -(void) doGrabcutWithMaskImage:(UIImage*)image{
     [self showLoadingIndicatorView];
+
+    __weak typeof(self)weakSelf = self;
     
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,
                                              (unsigned long)NULL), ^(void) {
-        UIImage* resultImage= [_grabcut doGrabCutWithMask:_originalImage maskImage:[self resizeImage:image size:_originalImage.size] iterationCount:5];
+        UIImage* resultImage= [weakSelf.grabcut doGrabCutWithMask:weakSelf.resizedImage maskImage:[weakSelf resizeImage:image size:weakSelf.resizedImage.size] iterationCount:5];
+        resultImage = [weakSelf masking:weakSelf.originalImage mask:[weakSelf resizeImage:resultImage size:weakSelf.originalImage.size]];
         dispatch_async(dispatch_get_main_queue(), ^(void) {
-            [self.resultImageView setImage:resultImage];
-            [self.imageView setAlpha:0.2];
-            [self hideLoadingIndicatorView];
+            [weakSelf.resultImageView setImage:resultImage];
+            [weakSelf.imageView setAlpha:0.0];
+            [weakSelf hideLoadingIndicatorView];
         });
     });
 }
@@ -181,7 +298,7 @@
     self.endPoint = [touch locationInView:self.imageView];
     
     if(_touchState == TouchStateRect){
-        _grabRect = [self getTouchedRectWithImageSize:_originalImage.size];
+        _grabRect = [self getTouchedRectWithImageSize:_resizedImage.size];
     }else if(_touchState == TouchStatePlus || _touchState == TouchStateMinus){
         [self.touchDrawView touchEnded:self.endPoint];
         _doGrabcutButton.enabled = YES;
@@ -275,7 +392,8 @@
 }
 
 -(void) setImageToTarget:(UIImage*)image{
-    _originalImage = image;
+    _originalImage = [self resizeWithRotation:image size:image.size];
+    _resizedImage = [self getProperResizedImage:_originalImage];
     _imageView.image = _originalImage;
     [self initStates];
     [self.grabcut resetManager];
