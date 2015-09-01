@@ -1,7 +1,7 @@
 # GrabCutIOS
 
 ## Screenshot
-![screenshot](doc/screenshot.png)
+![screenshot](http://jsharpsite.zz.mu/docs/screenshot.png)
 
 ## Usage
 
