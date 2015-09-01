@@ -187,6 +187,46 @@
     return cvMat;
 }
 
+-(Mat4b) resultMaskToMatrix:(CGSize)imageSize{
+    int cols = imageSize.width;
+    int rows = imageSize.height;
+    
+    cv::Mat cvMat(rows, cols, CV_8UC4); // 8 bits per component, 4 channels (color channels + alpha)
+    cvMat.setTo(0);
+    
+    uchar* data = mask.data;
+    
+    int fgd,bgd,pfgd,pbgd;
+    fgd = 0;
+    bgd = 0;
+    pfgd = 0;
+    pbgd = 0;
+    
+    for(int y = 0; y < rows; y++){
+        for( int x = 0; x < cols; x++){
+            int index = cols*y+x;
+            if(data[index] == GC_FGD){
+                cvMat.at<Vec4b>(cv::Point(x,y)) = Vec4b(0,0,0,255);
+                fgd++;
+            }else if(data[index] == GC_BGD){
+                cvMat.at<Vec4b>(cv::Point(x,y)) = Vec4b(255,255,255,255);
+                bgd++;
+            }else if(data[index] == GC_PR_FGD){
+                cvMat.at<Vec4b>(cv::Point(x,y)) = Vec4b(0,0,0,255);
+                pfgd++;
+            }else if(data[index] == GC_PR_BGD){
+                cvMat.at<Vec4b>(cv::Point(x,y)) = Vec4b(255,255,255,255);
+                pbgd++;
+            }
+        }
+    }
+    
+    NSLog(@"fgd : %d bgd : %d pfgd : %d pbgd : %d total : %d width*height : %d", fgd,bgd,pfgd,pbgd, fgd+bgd+pfgd+pbgd, cols*rows);
+    
+    return cvMat;
+}
+
+
 -(void) resetManager{
     mask.setTo(cv::GC_PR_BGD);
     bgModel.setTo(0);
@@ -207,16 +247,21 @@
                 cv::GC_INIT_WITH_RECT); // use rectangle
     // Get the pixels marked as likely foreground
     
-    cv::Mat tempMask;
-    cv::compare(mask,cv::GC_PR_FGD,tempMask,cv::CMP_EQ);
-    // Generate output image
-    cv::Mat foreground(img.size(),CV_8UC3,
-                       cv::Scalar(255,255,255));
+    UIImage* resultImage = [self UIImageFromCVMat:[self resultMaskToMatrix:sourceImage.size]];
     
-    tempMask=tempMask&1;
-    img.copyTo(foreground, tempMask);
+//    cv::Mat tempMask;
+//    cv::compare(mask,cv::GC_PR_FGD,tempMask,cv::CMP_EQ);
+//    // Generate output image
+//    cv::Mat foreground(img.size(),CV_8UC3,
+//                       cv::Scalar(255,255,255));
+//    
+//    tempMask=tempMask&1;
+//    
+//    UIImage* resultImage = [self UIImageFromCVMat:tempMask];
     
-    UIImage* resultImage=[self UIImageFromCVMat:foreground];
+//    img.copyTo(foreground, tempMask);
+    
+//    UIImage* resultImage=[self UIImageFromCVMat:foreground];
     
     return resultImage;
 }

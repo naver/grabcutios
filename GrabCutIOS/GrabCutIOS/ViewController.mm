@@ -9,9 +9,12 @@
 #import "ViewController.h"
 #import "GrabCutManager.h"
 #import "TouchDrawView.h"
+#import <MobileCoreServices/UTCoreTypes.h>
 
+static inline double radians (double degrees) {return degrees * M_PI/180;}
+const static int MAX_IMAGE_LENGTH = 400;
 
-@interface ViewController ()
+@interface ViewController ()<UINavigationControllerDelegate, UIImagePickerControllerDelegate>
 @property (weak, nonatomic) IBOutlet UIImageView *imageView;
 @property (weak, nonatomic) IBOutlet UIImageView *resultImageView;
 @property (nonatomic) CGPoint startPoint;
@@ -26,6 +29,11 @@
 @property (nonatomic, assign) TouchState touchState;
 @property (nonatomic, assign) CGRect grabRect;
 @property (nonatomic, strong) UIImage* originalImage;
+@property (nonatomic, strong) UIImage* resizedImage;
+@property (nonatomic, strong) UIImagePickerController* imagePicker;
+
+@property (nonatomic) UIActivityIndicatorView *spinner;
+@property (nonatomic) UIView* dimmedView;
 
 @end
 
@@ -35,6 +43,14 @@
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
     _grabcut = [[GrabCutManager alloc] init];
+    
+    _originalImage = [UIImage imageNamed:@"test.jpg"];
+    _resizedImage = [self getProperResizedImage:_originalImage];
+    
+    [self initStates];
+}
+
+-(void) initStates{
     _touchState = TouchStateNone;
     [self updateStateLabel];
     
@@ -43,7 +59,22 @@
     _minusButton.enabled = NO;
     _doGrabcutButton.enabled = NO;
     
-    _originalImage = [UIImage imageNamed:@"test.jpg"];
+}
+                     
+-(UIImage *) getProperResizedImage:(UIImage*)original{
+    float ratio = original.size.width/original.size.height;
+    
+    if(original.size.width > original.size.height){
+        if(original.size.width > MAX_IMAGE_LENGTH){
+            return [self resizeWithRotation:original size:CGSizeMake(MAX_IMAGE_LENGTH, MAX_IMAGE_LENGTH/ratio)];
+        }
+    }else{
+        if(original.size.height > MAX_IMAGE_LENGTH){
+            return [self resizeWithRotation:original size:CGSizeMake(MAX_IMAGE_LENGTH*ratio, MAX_IMAGE_LENGTH)];
+        }
+    }
+    
+    return original;
 }
 
 -(NSString*) getTouchStateToString{
@@ -111,19 +142,129 @@
     return scaledImage;
 }
 
--(void) doGrabcut{
-    UIImage* resultImage= [_grabcut doGrabCut:_originalImage foregroundBound:_grabRect iterationCount:5];
+-(UIImage*) resizeWithRotation:(UIImage *) sourceImage size:(CGSize) targetSize
+{
+    CGFloat targetWidth = targetSize.width;
+    CGFloat targetHeight = targetSize.height;
     
-    [self.resultImageView setImage:resultImage];
-    [self.imageView setAlpha:0.2];
+    CGImageRef imageRef = [sourceImage CGImage];
+    CGBitmapInfo bitmapInfo = CGImageGetBitmapInfo(imageRef);
+    CGColorSpaceRef colorSpaceInfo = CGImageGetColorSpace(imageRef);
+    
+    if (bitmapInfo == kCGImageAlphaNone) {
+        bitmapInfo = kCGImageAlphaNoneSkipLast;
+    }
+    
+    CGContextRef bitmap;
+    
+    if (sourceImage.imageOrientation == UIImageOrientationUp || sourceImage.imageOrientation == UIImageOrientationDown) {
+        bitmap = CGBitmapContextCreate(NULL, targetWidth, targetHeight, CGImageGetBitsPerComponent(imageRef), CGImageGetBytesPerRow(imageRef), colorSpaceInfo, bitmapInfo);
+        
+    } else {
+        bitmap = CGBitmapContextCreate(NULL, targetHeight, targetWidth, CGImageGetBitsPerComponent(imageRef), CGImageGetBytesPerRow(imageRef), colorSpaceInfo, bitmapInfo);
+        
+    }
+    
+    if (sourceImage.imageOrientation == UIImageOrientationLeft) {
+        CGContextRotateCTM (bitmap, radians(90));
+        CGContextTranslateCTM (bitmap, 0, -targetHeight);
+        
+    } else if (sourceImage.imageOrientation == UIImageOrientationRight) {
+        CGContextRotateCTM (bitmap, radians(-90));
+        CGContextTranslateCTM (bitmap, -targetWidth, 0);
+        
+    } else if (sourceImage.imageOrientation == UIImageOrientationUp) {
+        // NOTHING
+    } else if (sourceImage.imageOrientation == UIImageOrientationDown) {
+        CGContextTranslateCTM (bitmap, targetWidth, targetHeight);
+        CGContextRotateCTM (bitmap, radians(-180.));
+    }
+    
+    CGContextDrawImage(bitmap, CGRectMake(0, 0, targetWidth, targetHeight), imageRef);
+    CGImageRef ref = CGBitmapContextCreateImage(bitmap);
+    UIImage* newImage = [UIImage imageWithCGImage:ref];
+    
+    CGContextRelease(bitmap);
+    CGImageRelease(ref);
+    
+    return newImage; 
+}
+
+-(UIImage *) masking:(UIImage*)sourceImage mask:(UIImage*) maskImage{
+    //Mask Image
+    CGImageRef maskRef = maskImage.CGImage;
+    
+    CGImageRef mask = CGImageMaskCreate(CGImageGetWidth(maskRef),
+                                        CGImageGetHeight(maskRef),
+                                        CGImageGetBitsPerComponent(maskRef),
+                                        CGImageGetBitsPerPixel(maskRef),
+                                        CGImageGetBytesPerRow(maskRef),
+                                        CGImageGetDataProvider(maskRef), NULL, false);
+    
+    CGImageRef masked = CGImageCreateWithMask([sourceImage CGImage], mask);
+    CGImageRelease(mask);
+    
+    UIImage *maskedImage = [UIImage imageWithCGImage:masked];
+    
+    CGImageRelease(masked);
+    
+    return maskedImage;
+}
+
+-(CGSize) getResizeForTimeReduce:(UIImage*) image{
+    CGFloat ratio = image.size.width/ image.size.height;
+    
+    if([image size].width > [image size].height){
+
+        
+        if(image.size.width > 400){
+            return CGSizeMake(400, 400/ratio);
+        }else{
+            return image.size;
+        }
+        
+    }else{
+        if(image.size.height > 400){
+            return CGSizeMake(ratio/400, 400);
+        }else{
+            return image.size;
+        }
+    }
+}
+
+-(void) doGrabcut{
+    [self showLoadingIndicatorView];
+
+    __weak typeof(self)weakSelf = self;
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,
+                                             (unsigned long)NULL), ^(void) {
+        UIImage* resultImage= [weakSelf.grabcut doGrabCut:weakSelf.resizedImage foregroundBound:weakSelf.grabRect iterationCount:5];
+        resultImage = [weakSelf masking:weakSelf.originalImage mask:[weakSelf resizeImage:resultImage size:weakSelf.originalImage.size]];
+        
+        dispatch_async(dispatch_get_main_queue(), ^(void) {
+            [weakSelf.resultImageView setImage:resultImage];
+            [weakSelf.imageView setAlpha:0.0];
+            
+            [weakSelf hideLoadingIndicatorView];
+        });
+    });
 }
 
 -(void) doGrabcutWithMaskImage:(UIImage*)image{
-    UIImage* resultImage= [_grabcut doGrabCutWithMask:_originalImage maskImage:[self resizeImage:image size:_originalImage.size] iterationCount:5];
+    [self showLoadingIndicatorView];
+
+    __weak typeof(self)weakSelf = self;
     
-    [self.resultImageView setImage:resultImage];
-    
-    [self.imageView setAlpha:0.2];
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,
+                                             (unsigned long)NULL), ^(void) {
+        UIImage* resultImage= [weakSelf.grabcut doGrabCutWithMask:weakSelf.resizedImage maskImage:[weakSelf resizeImage:image size:weakSelf.resizedImage.size] iterationCount:5];
+        resultImage = [weakSelf masking:weakSelf.originalImage mask:[weakSelf resizeImage:resultImage size:weakSelf.originalImage.size]];
+        dispatch_async(dispatch_get_main_queue(), ^(void) {
+            [weakSelf.resultImageView setImage:resultImage];
+            [weakSelf.imageView setAlpha:0.0];
+            [weakSelf hideLoadingIndicatorView];
+        });
+    });
 }
 
 -(void) touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event{
@@ -157,7 +298,7 @@
     self.endPoint = [touch locationInView:self.imageView];
     
     if(_touchState == TouchStateRect){
-        _grabRect = [self getTouchedRectWithImageSize:_originalImage.size];
+        _grabRect = [self getTouchedRectWithImageSize:_resizedImage.size];
     }else if(_touchState == TouchStatePlus || _touchState == TouchStateMinus){
         [self.touchDrawView touchEnded:self.endPoint];
         _doGrabcutButton.enabled = YES;
@@ -223,7 +364,7 @@
         
         [self.touchDrawView clear];
         _rectButton.enabled = NO;
-        _plusButton.enabled = NO;
+        _plusButton.enabled = YES;
         _minusButton.enabled = YES;
         _doGrabcutButton.enabled = YES;
     }
@@ -236,5 +377,168 @@
     
     return NO;
 }
+
+#pragma mark - Image Picker
+
+-(IBAction) tapOnPhoto:(id)sender{
+    [self startMediaBrowserFromViewController: self
+                                usingDelegate: self];
+}
+
+-(IBAction) tapOnCamera:(id)sender{
+    [self startCameraControllerFromViewController: self
+                                    usingDelegate: self];
+
+}
+
+-(void) setImageToTarget:(UIImage*)image{
+    _originalImage = [self resizeWithRotation:image size:image.size];
+    _resizedImage = [self getProperResizedImage:_originalImage];
+    _imageView.image = _originalImage;
+    [self initStates];
+    [self.grabcut resetManager];
+}
+
+- (BOOL) startCameraControllerFromViewController: (UIViewController*) controller
+                                   usingDelegate: (id <UIImagePickerControllerDelegate,
+                                                   UINavigationControllerDelegate>) delegate {
+    
+    if (([UIImagePickerController isSourceTypeAvailable:
+          UIImagePickerControllerSourceTypeCamera] == NO)
+        || (delegate == nil)
+        || (controller == nil))
+        return NO;
+    
+    
+    self.imagePicker = [[UIImagePickerController alloc] init];
+    self.imagePicker.sourceType = UIImagePickerControllerSourceTypeCamera;
+    
+    // Displays a control that allows the user to choose picture or
+    // movie capture, if both are available:
+//    self.imagePicker.mediaTypes = [UIImagePickerController availableMediaTypesForSourceType:UIImagePickerControllerSourceTypeCamera];
+    self.imagePicker.mediaTypes = @[(NSString *)kUTTypeImage];
+
+    
+    // Hides the controls for moving & scaling pictures, or for
+    // trimming movies. To instead show the controls, use YES.
+    self.imagePicker.allowsEditing = NO;
+    
+    self.imagePicker.delegate = delegate;
+    
+    [controller presentViewController:self.imagePicker animated:YES completion:nil];
+    return YES;
+}
+
+- (BOOL) startMediaBrowserFromViewController: (UIViewController*) controller
+                               usingDelegate: (id <UIImagePickerControllerDelegate,
+                                               UINavigationControllerDelegate>) delegate {
+    
+    if (([UIImagePickerController isSourceTypeAvailable:
+          UIImagePickerControllerSourceTypeSavedPhotosAlbum] == NO)
+        || (delegate == nil)
+        || (controller == nil))
+        return NO;
+    
+    self.imagePicker = [[UIImagePickerController alloc] init];
+    self.imagePicker.sourceType = UIImagePickerControllerSourceTypeSavedPhotosAlbum;
+    
+    // Displays saved pictures and movies, if both are available, from the
+    // Camera Roll album.
+    self.imagePicker.mediaTypes = @[(NSString *)kUTTypeImage];
+//    [UIImagePickerController availableMediaTypesForSourceType:
+//     UIImagePickerControllerSourceTypeSavedPhotosAlbum];
+    
+    // Hides the controls for moving & scaling pictures, or for
+    // trimming movies. To instead show the controls, use YES.
+    self.imagePicker.allowsEditing = NO;
+    
+    self.imagePicker.delegate = delegate;
+    
+    [controller presentViewController:self.imagePicker animated:YES completion:nil];
+    return YES;
+}
+
+// For responding to the user tapping Cancel.
+- (void) imagePickerControllerDidCancel: (UIImagePickerController *) picker {
+    
+    [self.imagePicker dismissViewControllerAnimated:YES completion:nil];
+    self.imagePicker =nil;
+}
+
+// For responding to the user accepting a newly-captured picture or movie
+- (void) imagePickerController: (UIImagePickerController *) picker
+ didFinishPickingMediaWithInfo: (NSDictionary *) info {
+    
+    NSString *mediaType = [info objectForKey: UIImagePickerControllerMediaType];
+    UIImage *originalImage, *editedImage, *resultImage;
+    
+    if (CFStringCompare ((CFStringRef) mediaType, kUTTypeImage, 0)
+        == kCFCompareEqualTo) {
+        
+        editedImage = (UIImage *) [info objectForKey:
+                                   UIImagePickerControllerEditedImage];
+        originalImage = (UIImage *) [info objectForKey:
+                                     UIImagePickerControllerOriginalImage];
+        
+        if (editedImage) {
+            resultImage = editedImage;
+        } else {
+            resultImage = originalImage;
+        }
+    }
+    
+    [self setImageToTarget:resultImage];
+    
+    [self.imagePicker dismissViewControllerAnimated:YES completion:nil];
+    self.imagePicker = nil;
+    
+}
+
+#pragma mark - Indicator
+
+CG_INLINE CGRect
+CGRectSetOrigin(CGRect rect, CGPoint origin)
+{
+    rect.origin = origin;
+    return rect;
+}
+
+- (void)showLoadingIndicatorView
+{
+    [self showLoadingIndicatorViewWithStyle:UIActivityIndicatorViewStyleWhite];
+}
+
+- (void)showLoadingIndicatorViewWithStyle:(UIActivityIndicatorViewStyle)activityIndicatorViewStyle
+{
+    if (self.spinner != nil) {
+        [self hideLoadingIndicatorView];
+    }
+    
+    self.dimmedView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height)];
+    [self.dimmedView setBackgroundColor:[UIColor colorWithRed:0 green:0 blue:0 alpha:0.7]];
+    [self.view addSubview:self.dimmedView];
+    
+    UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:activityIndicatorViewStyle];
+    spinner.frame = CGRectSetOrigin(spinner.frame, CGPointMake(floorf(CGRectGetMidX(self.view.bounds) - CGRectGetMidX(spinner.bounds)), floorf(CGRectGetMidY(self.view.bounds) - CGRectGetMidY(spinner.bounds))));
+    spinner.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin|UIViewAutoresizingFlexibleRightMargin|UIViewAutoresizingFlexibleTopMargin|UIViewAutoresizingFlexibleBottomMargin;
+    [spinner startAnimating];
+    [self.view addSubview:spinner];
+    self.spinner = spinner;
+    
+    [self.view setUserInteractionEnabled:NO];
+}
+
+- (void)hideLoadingIndicatorView
+{
+    [self.spinner stopAnimating];
+    [self.spinner removeFromSuperview];
+    self.spinner = nil;
+    
+    [self.dimmedView removeFromSuperview];
+    self.dimmedView = nil;
+    
+    [self.view setUserInteractionEnabled:YES];
+}
+
 
 @end
