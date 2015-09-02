@@ -7,7 +7,7 @@ GrabCut is an image segmentation method based on graph cuts. The algorithm was d
 ![screenshot.png](/files/79285)
 
 ## Requirement
-1. Opencv Framework
+1. OpenCV Framework
 
 ## Usage
 1. Import GrabCutManager
