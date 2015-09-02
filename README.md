@@ -14,7 +14,7 @@ It is too big to use for real service.(76.8MB)
 So I'm going to implement the GrabCut Algorithm without OpenCV to reduce App size.
 
 This algorithm is based on color value distribution. 
-There is a limitation when foreground color and background color are similar.
+There is a limitation when foreground and background color are similar.
 
 ## References
 * C. Rother, V. Kolmogorov, and A. Blake, GrabCut: Interactive foreground extraction using iterated graph cuts, ACM Trans. Graph., vol. 23, pp. 309–314, 2004.
