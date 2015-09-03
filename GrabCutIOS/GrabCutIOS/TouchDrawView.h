@@ -2,8 +2,10 @@
 //  TouchDrawView.h
 //  OpenCVTest
 //
-//  Created by Eunchul Jeon on 2015. 8. 21..
-//  Copyright (c) 2015년 EunchulJeon. All rights reserved.
+//  Created by EunchulJeon on 2015. 8. 29..
+//  Copyright (c) 2015 Naver Corp.
+//  @Author Eunchul Jeon
+
 //
 
 #import <UIKit/UIKit.h>

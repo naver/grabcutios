@@ -3,7 +3,8 @@
 //  GrabCutIOS
 //
 //  Created by EunchulJeon on 2015. 8. 29..
-//  Copyright (c) 2015년 EunchulJeon. All rights reserved.
+//  Copyright (c) 2015 Naver Corp.
+//  @Author Eunchul Jeon
 //
 
 #import "AppDelegate.h"
