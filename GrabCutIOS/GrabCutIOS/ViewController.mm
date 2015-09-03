@@ -12,7 +12,7 @@
 #import <MobileCoreServices/UTCoreTypes.h>
 
 static inline double radians (double degrees) {return degrees * M_PI/180;}
-const static int MAX_IMAGE_LENGTH = 400;
+const static int MAX_IMAGE_LENGTH = 450;
 
 @interface ViewController ()<UINavigationControllerDelegate, UIImagePickerControllerDelegate>
 @property (weak, nonatomic) IBOutlet UIImageView *imageView;
@@ -243,7 +243,7 @@ const static int MAX_IMAGE_LENGTH = 400;
         
         dispatch_async(dispatch_get_main_queue(), ^(void) {
             [weakSelf.resultImageView setImage:resultImage];
-            [weakSelf.imageView setAlpha:0.0];
+            [weakSelf.imageView setAlpha:0.2];
             
             [weakSelf hideLoadingIndicatorView];
         });
@@ -261,7 +261,7 @@ const static int MAX_IMAGE_LENGTH = 400;
         resultImage = [weakSelf masking:weakSelf.originalImage mask:[weakSelf resizeImage:resultImage size:weakSelf.originalImage.size]];
         dispatch_async(dispatch_get_main_queue(), ^(void) {
             [weakSelf.resultImageView setImage:resultImage];
-            [weakSelf.imageView setAlpha:0.0];
+            [weakSelf.imageView setAlpha:0.2];
             [weakSelf hideLoadingIndicatorView];
         });
     });
