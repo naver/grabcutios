@@ -55,8 +55,8 @@ GrabCutManager* grabcut = [[GrabCutManager alloc] init];
 
 ## Limitation
 This program use OpenCV library.
-It is too big to use for real service.(76.8MB)
-So I'm going to implement the GrabCut Algorithm without OpenCV to reduce App size.
+It is not use GPU in IOS. it is obviously more slower than library that it use GPU.
+So I want to improve this code to use GPU like GPUImage.
 
 This algorithm is based on color value distribution. 
 There is a limitation when foreground and background color are similar.
