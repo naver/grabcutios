@@ -67,7 +67,7 @@ There is a limitation when foreground and background color are similar.
 
 ## License
 GrabCutIOS is licensed under the Apache License, Version 2.0.
-See [LICENSE](/files/79302) for full license text.
+See [LICENSE](/LICENSE) for full license text.
 
         Copyright (c) 2015 Naver Corp.
         @Author Eunchul Jeon
